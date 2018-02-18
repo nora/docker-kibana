@@ -1,0 +1,59 @@
+version: '2'
+services:
+  elasticsearch:
+    build: es
+    container_name: elasticsearch
+    volumes:
+        - es-data:/usr/share/elasticsearch/data
+        - ./es/config:/usr/share/elasticsearch/config
+    ports:
+        - 9200:9200
+    expose:
+        - 9300
+    networks:
+        - kibana_net
+    environment:
+      # Java VMのヒープサイズ上限
+      # マシンメモリの半分以下が推奨される
+      ES_JAVA_OPTS: '-Xms1g -Xmx1g'
+    ulimits:
+        nofile:
+            soft: 65536
+            hard: 65536
+    # 物理メモリ = mem_limit - memswap_limit
+    mem_limit: 2g
+    memswap_limit: 2g
+    logging:
+        driver: "json-file"
+        options:
+            max-size: "10m"
+            max-file: "10"
+  kibana:
+    build: kibana
+    container_name: kibana
+    ports:
+        - 5601:5601
+    networks:
+        - kibana_net
+    mem_limit: 2g
+    memswap_limit: 2g
+    depends_on:
+        - elasticsearch
+    logging:
+        driver: "json-file"
+        options:
+            max-size: "10m"
+            max-file: "10"
+
+volumes:
+    es-data:
+        driver: local
+
+networks:
+  kibana_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/24
+          gateway: 172.18.0.1
